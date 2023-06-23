@@ -98,6 +98,28 @@ export const getRandomPagePoint = async (page: Page): Promise<Vector> => {
     height: window.bounds.height ?? 0
   })
 }
+// Get a random point on a browser window
+export const getRandomElementPoint = async (
+  page: Page, 
+  element: ElementHandle, 
+  options?: BoxOptions
+): Promise<Vector> => {
+  // Make sure the object is in view
+  const objectId = element.remoteObject().objectId
+  if (objectId !== undefined) {
+    try {
+      await getCDPClient(page).send('DOM.scrollIntoViewIfNeeded', {
+        objectId
+      })
+    } catch (e) {
+      // use regular JS scroll method as a fallback
+      await element.evaluate((e) => e.scrollIntoView({ block: 'center' }))
+      await new Promise((resolve) => setTimeout(resolve, 2000)) // Wait a bit until the scroll has finished
+    }
+  }
+  const box = await boundingBoxWithFallback(page, element)
+  return getRandomBoxPoint(box, options);
+}
 
 // Using this method to get correct position of Inline elements (elements like <a>)
 const getElementBox = async (
